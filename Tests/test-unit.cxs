@@ -1,0 +1,53 @@
+Strict
+
+Import rcge.unit
+
+
+Class MyTestA Extends UnitTest
+
+	Method GetName$()
+		Return "Integer test"
+	End
+	
+	Method Run:Void()
+		AssertEquals(1+1, 2, "One plus one is two")
+		AssertEquals(1+2, 3, "One plus two is three")
+	End
+
+End
+
+Class MyTestB Extends UnitTest
+
+	Method GetName$()
+		Return "Null test"
+	End
+	
+	Method Run:Void()
+		AssertNull(Null, "Null is Null")
+	End
+
+End
+
+Class MyTestC Extends UnitTest
+
+	Method GetName$()
+		Return "Object test"
+	End
+	
+	Method Run:Void()
+		Local boxA:= BoxInt(10)
+		Local boxB:= boxA
+		AssertEquals(boxA, boxB, "A = B")
+	End
+
+End
+
+Function Main%()
+	Local testSuite:= New UnitTestSuite()
+	testSuite.AddTest(New MyTestA())
+	testSuite.AddTest(New MyTestB())
+	testSuite.AddTest(New MyTestC())
+	testSuite.Run()
+	
+	Return 0
+End

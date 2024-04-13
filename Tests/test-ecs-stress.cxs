@@ -1,0 +1,160 @@
+Strict
+
+#REFLECTION_FILTER += "test-ecs-stress"
+
+Import rcge.game
+Import rcge.ecs
+
+
+Class Square
+	
+	Field x#, y#,
+          dX#, dY#,
+          w#, h#
+
+End
+
+
+Class Red
+End
+
+
+Class Blue
+End
+
+
+Class SquareMoveSystem Extends System
+
+	Method GetArchetype$[]()
+		Return ["Square"]
+	End
+	
+	Method Update:Void(entities:List<Entity>, dt#)
+		For Local entity:= EachIn entities
+			Local square:= Square(entity.GetComponent("Square"))
+			square.x += square.dX
+			square.y += square.dY
+			If square.x < 0 And square.dX < 0
+				square.dX *= -1
+			ElseIf square.x > DeviceWindowWidth()-square.w And square.dX > 0
+				square.dX *= -1
+			EndIf
+			If square.y < 0 And square.dY < 0
+				square.dY *= -1
+			ElseIf square.y > DeviceWindowHeight()-square.h And square.dY > 0
+				square.dY *= -1
+			EndIf
+		Next
+	End
+
+End
+
+
+Class SquareCollisionSystem Extends System
+
+	Method GetArchetype$[]()
+		Return ["Red"]
+	End
+	
+	Method Update:Void(entities:List<Entity>, dt#)
+		For Local redEntity:= EachIn entities
+			If Not redEntity.IsAlive Then Continue
+			Local redSquare:= Square(redEntity.GetComponent("Square"))
+			For Local blueEntity:= EachIn Ecs.Query("Blue")
+				If Not blueEntity.IsAlive Then Continue
+				Local blueSquare:= Square(blueEntity.GetComponent("Square"))
+				Local collide:= True
+				If redSquare.x > blueSquare.x+blueSquare.w
+					collide = False
+				ElseIf redSquare.x+redSquare.w < blueSquare.x
+					collide = False
+				ElseIf redSquare.y > blueSquare.y+blueSquare.h
+					collide = False
+				ElseIf redSquare.y+redSquare.h < blueSquare.y
+					collide = False
+				EndIf
+				If collide
+					redEntity.Kill()
+					blueEntity.Kill()
+					Exit
+				EndIf
+			Next
+		Next
+	End
+
+End
+
+
+Class StressTest Extends Scene
+	
+	Field ecs:Ecs
+	
+	Field frameTime#
+
+	Method OnEnter:Void()
+		ecs = New Ecs()
+		ecs.AddComponent("Square")
+		ecs.AddComponent("Red")
+		ecs.AddComponent("Blue")
+		ecs.AddSystem(New SquareMoveSystem())
+		ecs.AddSystem(New SquareCollisionSystem())
+	End
+	
+	Method OnUpdate:Void(dt#)
+		frameTime = dt 
+		If KeyHit(KEY_ESCAPE)
+			Self.Parent.Stop()
+			Return
+		EndIf
+		ecs.Update(dt)
+		If KeyHit(KEY_SPACE) Or MouseHit(0)
+			For Local i:= 1 To 100
+				Local e:= ecs.CreateEntity()
+				Local square:= Square(e.Bind("Square"))
+				square.w = 10
+				square.h = 10
+				square.y = Rnd(0, DeviceWindowHeight()-square.h)
+				square.dY = Rnd(-5.0, 5.0)
+				If i <= 50
+					e.Bind("Red")
+					square.x = 0
+					square.dX = Rnd(1.0, 5.0)
+				Else
+					e.Bind("Blue")
+					square.x = DeviceWindowWidth() - square.w
+					square.dX = Rnd(1.0, 5.0) * -1.0
+				EndIf
+			Next
+		ElseIf KeyHit(KEY_BACKSPACE)
+			ecs.Clear()
+		EndIf
+	End
+	
+	Method OnRender:Void()
+		Local entities:= ecs.Query("Square")
+		For Local e:= EachIn entities
+			Local square:= Square(e.GetComponent("Square"))
+			If e.HasComponent("Red")
+				SetColor(255, 0, 0)
+			Else
+				SetColor(0, 0, 255)
+			EndIf
+			DrawRect(square.x, square.y, square.w, square.h)
+		Next
+		SetColor(255, 255, 0)
+		DrawText("Press Space to spawn entities", 20, 40)
+		DrawText("Press Backspace to kill all entities", 20, 50)
+		DrawText("Squares: " + entities.Count(), 20, 70)
+		DrawText("Frame time: " + frameTime, 20, 80)
+	End
+	
+	Method OnExit:Void()
+	End
+	
+End
+
+
+Function Main%()
+	New Game(New StressTest())
+	Return 0
+End

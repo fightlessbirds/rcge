@@ -1,0 +1,75 @@
+Strict
+
+Import rcge.unit
+Import rcge.game
+
+
+Class MyTestSceneA Extends Scene
+	
+	Method OnEnter:Void()
+		Print("Entered scene A")
+	End
+	
+	Method OnUpdate:Void(dt#)
+		If KeyHit(KEY_ESCAPE)
+			Print("Escape pressed")
+			Parent.PlayScene(New MyTestSceneB())
+		EndIf
+	End
+	
+	Method OnRender:Void()
+		DrawText("Scene A. Press Escape to switch scenes", 200, 200)
+	End
+	
+	Method OnExit:Void()
+		Print("Exited scene A")
+	End
+	
+End
+
+
+Class MyTestSceneB Extends Scene
+	
+	Method OnEnter:Void()
+		Print("Entered scene B")
+	End
+	
+	Method OnUpdate:Void(dt#)
+		Print("Delta time: " + dt)
+		If KeyHit(KEY_ESCAPE)
+			Print("Escape pressed")
+			Parent.PlayScene(New MyTestSceneA())
+		EndIf
+	End
+	
+	Method OnRender:Void()
+		DrawText("Scene B. Press Escape to switch scenes", 200, 200)
+	End
+	
+	Method OnExit:Void()
+		Print("Exited scene B")
+	End
+	
+End
+
+
+Class GameTest Extends UnitTest
+
+	Method GetName$()
+		Return "Game Test"
+	End
+	
+	Method Run:Void()
+		AssertNotNull(New Game(New MyTestSceneA()), "Creating a new Game object")
+	End
+
+End
+
+
+Function Main%()
+	Local testSuite:= New UnitTestSuite()
+	testSuite.AddTest(New GameTest())
+	testSuite.Run()
+	
+	Return 0
+End

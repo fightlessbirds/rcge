@@ -1,0 +1,104 @@
+Strict
+
+#REFLECTION_FILTER += "test-ecs"
+
+Import rcge.unit
+Import rcge.ecs
+
+
+Class EcsTest1 Extends UnitTest
+
+	Method GetName$()
+		Return "ECS Test 1"
+	End
+	
+	Method Run:Void()
+		Local myEcs:= New Ecs()
+		AssertNotNull(myEcs, "Instantiate Ecs class")
+		
+		myEcs.AddSystem(New TestSystemA())
+		Local systems:= myEcs.GetSystems()
+		AssertEquals(systems.Length , 1, "Add a System to the Ecs")
+		
+		myEcs.AddComponent("TestComponent")
+		Local components:= myEcs.GetComponents()
+		AssertEquals(components.Length, 1, "Add a Component to the Ecs")
+		
+		Local myEntity:= myEcs.CreateEntity()
+		AssertNotNull(myEcs.GetEntity(myEntity.Id), "Create an Entity")
+		
+		myEntity.Bind("TestComponent")
+		AssertTrue(myEntity.HasComponent("TestComponent"), "Bind a Component to an Entity")
+		
+		myEntity.Unbind("TestComponent")
+		AssertFalse(myEntity.HasComponent("TestComponent"), "Unbind a Component from an Entity")
+		
+		myEcs.Clear()
+		AssertEquals(myEntity.Id, 0, "Kill all Entities")
+	End
+
+End
+
+
+Class EcsTest2 Extends UnitTest
+
+	Method GetName$()
+		Return "ECS Test 2"
+	End
+	
+	Method Run:Void()
+		Local myEcs:= New Ecs()
+		myEcs.AddSystem(New TestSystemA())
+		myEcs.AddComponent("TestComponent")
+		Local myEntity:= myEcs.CreateEntity()
+		myEntity.Bind("TestComponent")
+		
+		For Local i:= 1 To 10
+			myEcs.Update(16)
+		Next
+		Local testComponent:= TestComponent(myEntity.GetComponent("TestComponent"))
+		AssertEquals(testComponent.data, 33, "Update Systems")
+		
+		myEcs.SetSystemIsActive("TestSystemA", False)
+		myEcs.Update(16)
+		AssertEquals(testComponent.data, 33, "(De)activate a System")
+		
+		myEntity.Kill()
+		myEcs.Update(16)
+		AssertFalse(myEntity.IsAlive, "Kill an Entity")
+	End
+
+End
+
+
+Class TestSystemA Extends System
+		
+	Method GetArchetype$[]()
+		Return ["TestComponent"]
+	End
+	
+	Method Update:Void(entities:List<Entity>, dt#)
+		For Local e:= EachIn entities
+			Local testC:= TestComponent(e.GetComponent("TestComponent"))
+			testC.data += 1
+		Next
+	End
+	
+End
+
+
+Class TestComponent
+	
+	Field data:= 23
+	
+End
+
+
+Function Main%()
+	Local suite:= New UnitTestSuite()
+	suite.AddTest(New EcsTest1())
+	suite.AddTest(New EcsTest2())
+	suite.Run()
+
+	Return 0
+End

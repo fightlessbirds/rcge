@@ -1,0 +1,366 @@
+Strict
+
+#REFLECTION_FILTER += "rcge.ecs"
+
+Import reflection
+Import brl.pool
+
+
+Class Ecs
+
+	Method New()
+		_compOps = New ComponentOperationBuffer(Self)
+	End
+
+	Method AddSystem:Void(sys:System)
+		If sys = Null Then Error("Ecs.AddSystem(): sys parameter is Null")
+		If _systemsList.Contains(sys) Then Error("Ecs.AddSystem(): Added duplicate system " + GetClass(sys).Name)
+		_systemsList.AddLast(sys)
+		Local classNameSplit:= GetClass(sys).Name.Split(".")
+		Local className:= classNameSplit[classNameSplit.Length-1]
+		_systemsMap.Add(className, sys)
+		sys._AddNotify(Self)
+	End
+
+	Method GetSystems:System[]()
+		Return _systemsList.ToArray()
+	End
+	
+	Method SetSystemIsActive:Void(isActive?)
+		For Local sys:= EachIn _systemsList
+			sys.isActive = isActive
+		Next
+	End
+	
+	Method SetSystemIsActive:Void(sysName$, isActive?)
+		Local sys:= _systemsMap.Get(sysName)
+		If sys = Null Then Error("Ecs.SetSystemIsActive(): System not found " + sysName)
+		sys.isActive = isActive
+	End
+	
+	'Components added to the ECS must be accessible to the reflection module.
+	'Add the module containing your Components to #REFLECTION_FILTER.
+	Method AddComponent:Void(cName$)
+		If _components.Contains(cName) Then Error("Ecs.AddComponent(): Added duplicate component " + cName)
+		If GetClass(cName) = Null Then Error("Ecs.AddComponent(): Cannot find class " + cName)
+		_components.AddLast(cName)
+		_relationships.Add(cName, New IntMap<Entity>())
+	End
+	
+	Method GetComponents$[]()
+		Return _components.ToArray()
+	End
+	
+	Method CreateEntity:Entity()
+		Local e:= _entitiesPool.Allocate()
+		e._id = _NextId
+		_NextId += 1
+		e._isAlive = True
+		_entities.Add(e._id, e)
+		e._AddNotify(Self)
+		Return e
+	End
+	
+	Method GetEntity:Entity(id%)
+		Local e:= _entities.Get(id)
+		If e = Null Then Error("Ecs.GetEntity(): No entity with ID " + id)
+		Return e
+	End
+	
+	Method Bind:Object(e:Entity, cName$, obj:Object=Null)
+		If e = Null Then Error("Ecs.Bind(): e parameter is Null")
+		Local rel:= _relationships.Get(cName)
+		If rel = Null Then Error("TEcs.Bind(): Cannot bind unknown component class " + cName)
+		Local c:Object
+		If obj
+			c = obj
+		Else
+			c = GetClass(cName).NewInstance()
+		EndIf
+		If _isUpdating
+			_compOps.Enqueue(ComponentOperation.OP_BIND, rel, e, cName, c)
+		Else
+			e._components.Add(cName, c)
+			rel.Add(e._id, e)
+		EndIf
+		_queryCache.Remove(cName)
+		Return c
+	End
+	
+	Method Unbind:Void(e:Entity, cName$)
+		If e = Null Then Error("Ecs.Unbind(): e parameter is Null")
+		Local rel:= _relationships.Get(cName)
+		If rel = Null Then Error("TEcs.Unbind(): Cannot unbind unknown component class " + cName)
+		If _isUpdating
+			_compOps.Enqueue(ComponentOperation.OP_UNBIND, rel, e, cName, Null)
+		Else
+			e._components.Remove(cName)
+			rel.Remove(e._id)
+		EndIf
+		_queryCache.Remove(cName)
+	End
+	
+	Method Update:Void(dt#)
+		For Local system:= EachIn _systemsList
+			If Not system.isActive Then Continue
+			Local entities:= Query(system)
+			_isUpdating = True
+			system.Update(entities, dt)
+			_isUpdating = False
+			_compOps.Flush()
+			_ClearDeadEntities()
+		Next
+	End
+	
+	Method Query:List<Entity>(cName$)
+		Local cached:= _queryCache.Get(cName)
+		If cached Then Return cached
+		Local rel:= _relationships.Get(cName)
+		If rel = Null Then Error("Ecs.Query(): Undefined Component " + cName)
+		Local entities:= New List<Entity>()
+		For Local e:= EachIn rel.Values()
+			If e.IsAlive Then entities.AddLast(e)
+		Next
+		_queryCache.Add(cName, entities)
+		Return entities
+	End
+	
+	Method Query:List<Entity>(archetype$[])
+		Local entities:= New List<Entity>()
+		Local compCount:= archetype.Length
+		If compCount > 0
+			entities = Query(archetype[0])
+		EndIf
+		If compCount > 1
+			For Local i:= 1 Until compCount
+				Local rel:= _relationships.Get(archetype[i])
+				If rel = Null Then Error("Ecs.Query(): Undefined Component " + archetype[i])
+				For Local e:= EachIn entities
+					If Not rel.Contains(e._id) Then entities.Remove(e)
+				Next
+			Next
+		EndIf
+		Return entities
+	End
+	
+	Method Query:List<Entity>(system:System)
+		Local archetype:= system.GetArchetype()
+		Local entities:= New List<Entity>()
+		If archetype.Length > 0
+			entities = Query(archetype)
+		EndIf
+		Return entities
+	End
+	
+	Method Clear:Void()
+		If _isUpdating Then Error("Ecs.Clear(): Cannot clear while Systems are updating")
+		_queryCache.Clear()
+		For Local e:= EachIn _entities.Values()
+			_entitiesPool.Free(e)
+		Next
+		_entities.Clear()
+		_deadEntities.Clear()
+		For Local rel:= EachIn _relationships.Values()
+			rel.Clear()
+		Next
+	End
+	
+Protected
+
+	Field _deadEntities:= New List<Entity>()
+
+Private
+
+	Field _NextId:= 1
+
+	Field _systemsList:= New List<System>()
+	
+	Field _systemsMap:= New StringMap<System>()
+	
+	Field _components:= New StringList()
+	
+	Field _entities:= New IntMap<Entity>()
+	
+	Field _entitiesPool:= New Pool<Entity>()
+	
+	Field _relationships:= New StringMap<IntMap<Entity>>()
+	
+	Field _isUpdating?
+	
+	Field _compOps:ComponentOperationBuffer
+	
+	Field _queryCache:= New StringMap<List<Entity>>()
+	
+	Method _ClearDeadEntities:Void()
+		For Local e:= EachIn _deadEntities
+			For Local cName:= EachIn e._components.Keys()
+				Unbind(e, cName)
+			Next
+			_entities.Remove(e._id)
+			_entitiesPool.Free(e)
+		Next
+		_deadEntities.Clear()
+	End
+
+End
+
+
+Class System
+	
+	Field isActive:= True
+	
+	'Return an array of Component names that this System requires.
+	Method GetArchetype$[]() Abstract
+	
+	'Perform System logic.
+	Method Update:Void(entities:List<Entity>, dt#) Abstract
+	
+	Method Ecs:Ecs() Property
+		Return _ecs
+	End
+	
+Protected
+
+	Method _AddNotify:Void(parent:Ecs)
+		_ecs = parent
+	End
+
+Private
+
+	Field _ecs:Ecs
+
+End
+
+
+Class Entity Implements IOnPoolFree
+
+	Method Id%() Property
+		Return _id
+	End
+	
+	Method Bind:Object(cName$, obj:Object=Null)
+		Return _ecs.Bind(Self, cName, obj)
+	End
+	
+	Method Unbind:Void(cName$)
+		_ecs.Unbind(Self, cName)
+	End
+	
+	Method HasComponent?(cName$)
+		Return _components.Contains(cName)
+	End
+	
+	Method GetComponent:Object(cName$)
+		Local c:= _components.Get(cName)
+		If c = Null Then Error("Entity.GetComponent(): Entity " + _id + " is missing Component " + cName)
+		Return c
+	End
+	
+	Method TryComponent:Object(cName$)
+		Return _components.Get(cName)
+	End
+	
+	Method IsAlive?() Property
+		Return _isAlive
+	End
+	
+	'Never keep a reference to an Entity that has been killed.
+	Method Kill:Void()
+		_ecs._deadEntities.AddLast(Self)
+		_isAlive = False
+	End
+	
+	Method OnPoolFree:Void()
+		_id = 0
+		_components.Clear()
+		_isAlive = False
+		_ecs = Null
+	End
+
+Protected
+	
+	Field _id%
+	
+	Field _components:= New StringMap<Object>()
+	
+	Field _isAlive?
+	
+	Method _AddNotify:Void(parent:Ecs)
+		_ecs = parent
+	End
+
+Private
+	
+	Field _ecs:Ecs
+
+End
+
+
+'===================================================================================================
+Private '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   MODULE PRIVATE SCOPE   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'===================================================================================================
+
+
+Class ComponentOperationBuffer
+	
+	Method New(ecs:Ecs)
+		_ecs = ecs
+	End
+	
+	Method Enqueue:Void(op%, rel:IntMap<Entity>, e:Entity, cName$, c:Object=Null)
+		Local opObj:= _opPool.Allocate()
+		opObj.Init(op, rel, e, cName, c)
+		_opList.AddLast(opObj)
+	End
+	
+	Method Flush:Void()
+		While _opList.Count() > 0
+			Local opObj:= _opList.RemoveFirst()
+			If opObj = Null Then Exit
+			Local e:= opObj.e
+			Select opObj.op
+				Case ComponentOperation.OP_BIND
+					e._components.Add(opObj.cName, opObj.c)
+					opObj.rel.Add(e._id, e)
+				Case ComponentOperation.OP_UNBIND
+					e._components.Remove(opObj.cName)
+					opObj.rel.Remove(e._id)
+			End
+		Wend
+	End
+
+Private
+
+	Field _ecs:Ecs
+
+	Field _opList:= New List<ComponentOperation>()
+
+	Field _opPool:= New Pool<ComponentOperation>()
+
+End
+
+
+Class ComponentOperation Implements IOnPoolFree
+
+	Enumerate OP_BIND, OP_UNBIND
+
+	Field op%
+	Field rel:IntMap<Entity>
+	Field e:Entity
+	Field cName$
+	Field c:Object
+	
+	Method Init:Void(op%, rel:IntMap<Entity>, e:Entity, cName$, c:Object)
+		Self.op = op
+		Self.rel = rel
+		Self.e = e
+		Self.cName = cName
+		Self.c = c
+	End
+	
+	Method OnPoolFree:Void()
+		rel = Null
+		c = Null
+	End
+
+End

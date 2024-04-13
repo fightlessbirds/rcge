@@ -1,0 +1,156 @@
+Strict
+
+Class UnitTestSuite
+
+	Method AddTest:Void(test:UnitTest)
+		If test = Null Then Error("UnitTestSuite.addTest(): test parameter is Null")
+		
+		_tests.PushLast(test)
+	End
+	
+	Method Run:Void()
+		While _tests.Length > 0
+			Local test:= _tests.PopFirst()
+			test.Run()
+			If test.Passed
+				_testsPassed += 1
+			Else
+				_testsFailed += 1
+			EndIf
+			_completedTests.PushLast(test)
+		Wend
+		
+		Print("================================~n        Unit Test Results~n================================")
+		Local i:= 1
+		For Local test:= EachIn _completedTests
+			Print("~nTest #" + i + ": " + test.GetName())
+			test.PrintReport()
+			i += 1
+		Next
+		Print("~nTests passed: " + _testsPassed + "~nTests failed: " + _testsFailed)
+	End
+
+Private
+
+	Field _tests:= New Deque<UnitTest>()
+	Field _completedTests:= New Deque<UnitTest>()
+	
+	Field _testsPassed:= 0
+	Field _testsFailed:= 0
+
+End
+
+
+Class UnitTest
+
+	Method GetName$() Abstract
+
+	Method Run:Void() Abstract
+	
+	Method PrintReport:Void()
+		For Local line:= EachIn _report
+			Print(line)
+		Next
+	End
+	
+	Method Passed?() Property
+		Return _passed
+	End
+	
+Protected
+	
+	Method AssertEquals:Void(a%, b%, msg$="")
+		Local line$
+		If a = b
+			line += "PASS AssertEquals "
+		Else
+			line += "FAIL AssertEquals "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertEquals:Void(a#, b#, msg$="")
+		Local line$
+		If a = b
+			line += "PASS AssertEquals "
+		Else
+			line += "FAIL AssertEquals "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertEquals:Void(a$, b$, msg$="")
+		Local line$
+		If a = b
+			line += "PASS AssertEquals "
+		Else
+			line += "FAIL AssertEquals "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertEquals:Void(a:Object, b:Object, msg$="")
+		Local line$
+		If a = b
+			line += "PASS AssertEquals "
+		Else
+			line += "FAIL AssertEquals "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertTrue:Void(var?, msg$="")
+		Local line$
+		If var
+			line += "PASS AssertTrue "
+		Else
+			line += "FAIL AssertTrue "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertFalse:Void(var?, msg$="")
+		Local line$
+		If Not var
+			line += "PASS AssertFalse "
+		Else
+			line += "FAIL AssertFalse "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertNotNull:Void(obj:Object, msg$="")
+		Local line$
+		If obj
+			line += "PASS AssertNotNull "
+		Else
+			line += "FAIL AssertNotNull "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+	
+	Method AssertNull:Void(obj:Object, msg$="")
+		Local line$
+		If obj = Null
+			line += "PASS AssertNull "
+		Else
+			line += "FAIL AssertNull "
+			_passed = False
+		EndIf
+		_report.AddLast(line + msg)
+	End
+
+Private
+
+	Field _report:= New StringList()
+
+	Field _passed:= True
+
+End

@@ -1,0 +1,98 @@
+Strict
+
+Import mojo
+
+ 
+Class Game Extends App
+	
+	Method New(scene:Scene)
+		If scene = Null Then Error("Game.New(): scene parameter is Null")
+		
+		_nextScene = scene
+		_nextScene._AddNotify(Self)
+	End
+	
+	Method OnUpdate%()
+		If _currentScene = Null 'First run
+			_currentScene = _nextScene
+			_currentScene.OnEnter()
+		ElseIf _currentScene.isFinished 'Switching scenes
+			_currentScene.OnExit()
+			If _nextScene
+				_currentScene = _nextScene
+				_nextScene = Null
+				_currentScene.OnEnter()
+			Else
+				EndApp()
+			EndIf
+		End
+		
+		Local newMillisecs:= Millisecs()
+		Local deltaTime:= Float(newMillisecs - _oldMillisecs) / 1000.0
+		 _oldMillisecs = newMillisecs
+		_currentScene.OnUpdate(deltaTime)
+		
+		Return 0
+	End
+		
+	Method OnRender%()
+		If _currentScene = Null Then Return 0
+		
+		Cls()
+		_currentScene.OnRender()
+		
+		Return 0
+	End
+
+	Method PlayScene:Void(scene:Scene)
+		If scene = Null Then Error("Game.SwitchScene(): scene parameter is Null")
+		
+		_currentScene.isFinished = True
+		_nextScene = scene
+		_nextScene._AddNotify(Self)
+	End
+	
+	Method Stop:Void()
+		_currentScene.isFinished = True
+	End
+
+Private
+
+	Field _currentScene:Scene
+	Field _nextScene:Scene
+	
+	Field _oldMillisecs%
+
+	Method New()
+	End
+	
+End
+
+
+Class Scene
+
+	Field isFinished:= False
+
+	Method OnEnter:Void() Abstract
+	
+	Method OnUpdate:Void(dt#) Abstract
+	
+	Method OnRender:Void() Abstract
+	
+	Method OnExit:Void() Abstract
+	
+	Method Parent:Game() Property
+		Return _parent
+	End
+	
+Protected
+
+	Method _AddNotify:Void(parent:Game)
+		_parent = parent
+	End
+	
+Private
+
+	Field _parent:Game
+
+End
