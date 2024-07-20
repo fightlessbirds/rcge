@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER += "test-ecs-stress"
+#REFLECTION_FILTER+= "|test-ecs-stress*"
 
 Import rcge.game
 Import rcge.ecs
@@ -25,6 +25,10 @@ End
 
 Class SquareMoveSystem Extends System
 
+	Method GetName$()
+		Return "SquareMoveSystem"
+	End
+	
 	Method GetArchetype$[]()
 		Return ["Square"]
 	End
@@ -51,6 +55,10 @@ End
 
 
 Class SquareCollisionSystem Extends System
+
+	Method GetName$()
+		Return "SquareCollisionSystem"
+	End
 
 	Method GetArchetype$[]()
 		Return ["Red"]

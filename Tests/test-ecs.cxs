@@ -72,7 +72,11 @@ End
 
 
 Class TestSystemA Extends System
-		
+	
+	Method GetName$()
+		Return "TestSystemA"
+	End
+	
 	Method GetArchetype$[]()
 		Return ["TestComponent"]
 	End

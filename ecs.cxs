@@ -16,9 +16,7 @@ Class Ecs
 		If sys = Null Then Error("Ecs.AddSystem(): sys parameter is Null")
 		If _systemsList.Contains(sys) Then Error("Ecs.AddSystem(): Added duplicate system " + GetClass(sys).Name)
 		_systemsList.AddLast(sys)
-		Local classNameSplit:= GetClass(sys).Name.Split(".")
-		Local className:= classNameSplit[classNameSplit.Length-1]
-		_systemsMap.Add(className, sys)
+		_systemsMap.Add(sys.GetName(), sys)
 		sys._AddNotify(Self)
 	End
 
@@ -110,6 +108,24 @@ Class Ecs
 			_compOps.Flush()
 			_ClearDeadEntities()
 		Next
+	End
+	
+	Method UpdateSystem:Void(sysName$, dt#=0.0)
+		Local system:System
+		For Local i:= EachIn _systemsList
+			If i.GetName() = sysName
+				system = i
+				Exit
+			EndIf
+		Next
+		If system = Null Then Error("Ecs.UpdateSystem(): System not found " + sysName)
+		
+		Local entities:= Query(system)
+		_isUpdating = True
+		system.Update(entities, dt)
+		_isUpdating = False
+		_compOps.Flush()
+		_ClearDeadEntities()
 	End
 	
 	Method Query:List<Entity>(cName$)
@@ -208,6 +224,9 @@ End
 Class System
 	
 	Field isActive:= True
+	
+	'The name of the system.
+	Method GetName$() Abstract
 	
 	'Return an array of Component names that this System requires.
 	Method GetArchetype$[]() Abstract
