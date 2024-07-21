@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER += "rcge.ecs"
+#REFLECTION_FILTER+= "rcge.ecs"
 
 Import reflection
 Import brl.pool
@@ -265,10 +265,12 @@ Class Entity Implements IOnPoolFree
 		_ecs.Unbind(Self, cName)
 	End
 	
-	Method HasComponent?(cName$)
-		Return _components.Contains(cName)
+	'Get a component or return Null
+	Method HasComponent:Object(cName$)
+		Return _components.Get(cName)
 	End
 	
+	'Get a component or throw an error
 	Method GetComponent:Object(cName$)
 		Local c:= _components.Get(cName)
 		If c = Null Then Error("Entity.GetComponent(): Entity " + _id + " is missing Component " + cName)
