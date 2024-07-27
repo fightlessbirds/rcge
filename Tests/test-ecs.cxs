@@ -28,10 +28,10 @@ Class EcsTest1 Extends UnitTest
 		AssertNotNull(myEcs.GetEntity(myEntity.Id), "Create an Entity")
 		
 		myEntity.Bind("TestComponent")
-		AssertTrue(myEntity.HasComponent("TestComponent"), "Bind a Component to an Entity")
+		AssertTrue(Bool(myEntity.HasComponent("TestComponent")), "Bind a Component to an Entity")
 		
 		myEntity.Unbind("TestComponent")
-		AssertFalse(myEntity.HasComponent("TestComponent"), "Unbind a Component from an Entity")
+		AssertFalse(Bool(myEntity.HasComponent("TestComponent")), "Unbind a Component from an Entity")
 		
 		myEcs.Clear()
 		AssertEquals(myEntity.Id, 0, "Kill all Entities")

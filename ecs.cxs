@@ -277,10 +277,6 @@ Class Entity Implements IOnPoolFree
 		Return c
 	End
 	
-	Method TryComponent:Object(cName$)
-		Return _components.Get(cName)
-	End
-	
 	Method IsAlive?() Property
 		Return _isAlive
 	End
