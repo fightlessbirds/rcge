@@ -341,7 +341,7 @@ Class ComponentOperationBuffer
 			Local e:= opObj.e
 			Select opObj.op
 				Case ComponentOperation.OP_BIND
-					e._components.Add(opObj.cName, opObj.c)
+					e._components.Update(opObj.cName, opObj.c)
 					opObj.rel.Add(e._id, e)
 				Case ComponentOperation.OP_UNBIND
 					e._components.Remove(opObj.cName)
