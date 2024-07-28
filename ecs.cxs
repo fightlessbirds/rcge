@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER+= "rcge.ecs"
+#REFLECTION_FILTER+= "|rcge.ecs"
 
 Import reflection
 Import brl.pool
