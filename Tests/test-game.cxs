@@ -17,8 +17,8 @@ Class MyTestSceneA Extends Scene
 		EndIf
 	End
 	
-	Method OnRender:Void()
-		DrawText("Scene A. Press Escape to switch scenes", 200, 200)
+	Method OnRender:Void(canvas:Canvas)
+		canvas.DrawText("Scene A. Press Escape to switch scenes", 200, 200)
 	End
 	
 	Method OnExit:Void()
@@ -42,8 +42,8 @@ Class MyTestSceneB Extends Scene
 		EndIf
 	End
 	
-	Method OnRender:Void()
-		DrawText("Scene B. Press Escape to switch scenes", 200, 200)
+	Method OnRender:Void(canvas:Canvas)
+		canvas.DrawText("Scene B. Press Escape to switch scenes", 200, 200)
 	End
 	
 	Method OnExit:Void()
