@@ -138,22 +138,22 @@ Class StressTest Extends Scene
 		EndIf
 	End
 	
-	Method OnRender:Void()
+	Method OnRender:Void(canvas:Canvas)
 		Local entities:= ecs.Query("Square")
 		For Local e:= EachIn entities
 			Local square:= Square(e.GetComponent("Square"))
 			If e.HasComponent("Red")
-				SetColor(255, 0, 0)
+				canvas.SetColor(1.0, 0, 0)
 			Else
-				SetColor(0, 0, 255)
+				canvas.SetColor(0, 0, 1.0)
 			EndIf
-			DrawRect(square.x, square.y, square.w, square.h)
+			canvas.DrawRect(square.x, square.y, square.w, square.h)
 		Next
-		SetColor(255, 255, 0)
-		DrawText("Press Space to spawn entities", 20, 40)
-		DrawText("Press Backspace to kill all entities", 20, 50)
-		DrawText("Squares: " + entities.Count(), 20, 70)
-		DrawText("Frame time: " + frameTime, 20, 80)
+		canvas.SetColor(1.0, 1.0, 0)
+		canvas.DrawText("Press Space to spawn entities", 20, 40)
+		canvas.DrawText("Press Backspace to kill all entities", 20, 50)
+		canvas.DrawText("Squares: " + entities.Count(), 20, 70)
+		canvas.DrawText("Frame time: " + frameTime, 20, 80)
 	End
 	
 	Method OnExit:Void()
