@@ -62,7 +62,7 @@ Class Game Extends App
 		_currentScene.isFinished = True
 	End
 	
-	Method GetCanvas:Canvas()
+	Method Canvas:Canvas() Property
 		Return _canvas
 	End
 
