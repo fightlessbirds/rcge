@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER+= "|test-ecs-stress*"
+#REFLECTION_FILTER += "|test_ecs_stress"
 
 Import rcge.game
 Import rcge.ecs
@@ -117,7 +117,9 @@ Class StressTest Extends Scene
 		ecs.Update(dt)
 		If KeyHit(KEY_SPACE) Or MouseHit(0)
 			For Local i:= 1 To 100
-				Local e:= ecs.CreateEntity()
+				Local argClasses:= New ClassInfo[1]
+				argClasses[0] = GetClass("Entity")
+				Local e:= ecs.CreateEntity(GetFunction("OnEntityKilled", argClasses))
 				Local square:= Square(e.Bind("Square"))
 				square.w = 10
 				square.h = 10
@@ -159,6 +161,11 @@ Class StressTest Extends Scene
 	Method OnExit:Void()
 	End
 	
+End
+
+
+Function OnEntityKilled:Void(e:Entity)
+	Print("Ouch!")
 End
 
 

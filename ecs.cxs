@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER+= "|rcge.ecs"
+#REFLECTION_FILTER += "|rcge.ecs"
 
 Import reflection
 Import brl.pool
@@ -49,11 +49,13 @@ Class Ecs
 		Return _components.ToArray()
 	End
 	
-	Method CreateEntity:Entity()
+	'onKill = SomeFunc:Void(e:Entity)
+	Method CreateEntity:Entity(onKill:FunctionInfo=Null)
 		Local e:= _entitiesPool.Allocate()
 		e._id = _NextId
 		_NextId += 1
 		e._isAlive = True
+		If onKill Then e._onKill = onKill
 		_entities.Add(e._id, e)
 		e._AddNotify(Self)
 		Return e
@@ -174,10 +176,6 @@ Class Ecs
 		Next
 	End
 	
-Protected
-
-	Field _deadEntities:= New List<Entity>()
-
 Private
 
 	Field _NextId:= 1
@@ -189,6 +187,8 @@ Private
 	Field _components:= New StringList()
 	
 	Field _entities:= New IntMap<Entity>()
+	
+	Field _deadEntities:= New List<Entity>()
 	
 	Field _entitiesPool:= New Pool<Entity>()
 	
@@ -230,16 +230,14 @@ Class System
 	Method Ecs:Ecs() Property
 		Return _ecs
 	End
-	
-Protected
-
-	Method _AddNotify:Void(parent:Ecs)
-		_ecs = parent
-	End
 
 Private
 
 	Field _ecs:Ecs
+	
+	Method _AddNotify:Void(parent:Ecs)
+		_ecs = parent
+	End
 
 End
 
@@ -278,6 +276,11 @@ Class Entity Implements IOnPoolFree
 	Method Kill:Void()
 		_ecs._deadEntities.AddLast(Self)
 		_isAlive = False
+		If _onKill
+			Local args:= New Object[1]
+			args[0] = Self
+			_onKill.Invoke(args)
+		EndIf
 	End
 	
 	Method OnPoolFree:Void()
@@ -287,21 +290,21 @@ Class Entity Implements IOnPoolFree
 		_ecs = Null
 	End
 
-Protected
-	
+Private
+
 	Field _id%
 	
 	Field _components:= New StringMap<Object>()
 	
 	Field _isAlive?
 	
+	Field _ecs:Ecs
+	
+	Field _onKill:FunctionInfo
+	
 	Method _AddNotify:Void(parent:Ecs)
 		_ecs = parent
 	End
-
-Private
-	
-	Field _ecs:Ecs
 
 End
 

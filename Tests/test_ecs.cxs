@@ -1,6 +1,6 @@
 Strict
 
-#REFLECTION_FILTER += "test-ecs"
+#REFLECTION_FILTER += "|test_ecs"
 
 Import rcge.unit
 Import rcge.ecs
@@ -34,6 +34,7 @@ Class EcsTest1 Extends UnitTest
 		AssertFalse(Bool(myEntity.HasComponent("TestComponent")), "Unbind a Component from an Entity")
 		
 		myEcs.Clear()
+		myEcs.Update(16)
 		AssertEquals(myEntity.Id, 0, "Kill all Entities")
 	End
 
@@ -59,7 +60,7 @@ Class EcsTest2 Extends UnitTest
 		Local testComponent:= TestComponent(myEntity.GetComponent("TestComponent"))
 		AssertEquals(testComponent.data, 33, "Update Systems")
 		
-		myEcs.SetSystemIsActive("TestSystemA", False)
+		myEcs.SetSystemActive("TestSystemA", False)
 		myEcs.Update(16)
 		AssertEquals(testComponent.data, 33, "(De)activate a System")
 		
