@@ -24,15 +24,15 @@ Class Ecs
 		Return _systemsList.ToArray()
 	End
 	
-	Method SetSystemIsActive:Void(isActive?)
+	Method SetAllSystemsActive:Void(isActive?)
 		For Local sys:= EachIn _systemsList
 			sys.isActive = isActive
 		Next
 	End
 	
-	Method SetSystemIsActive:Void(sysName$, isActive?)
+	Method SetSystemActive:Void(sysName$, isActive?)
 		Local sys:= _systemsMap.Get(sysName)
-		If sys = Null Then Error("Ecs.SetSystemIsActive(): System not found " + sysName)
+		If sys = Null Then Error("Ecs.SetSystemActive(): System not found " + sysName)
 		sys.isActive = isActive
 	End
 	
@@ -169,15 +169,8 @@ Class Ecs
 	End
 	
 	Method Clear:Void()
-		If _isUpdating Then Error("Ecs.Clear(): Cannot clear while Systems are updating")
-		_queryCache.Clear()
 		For Local e:= EachIn _entities.Values()
-			_entitiesPool.Free(e)
-		Next
-		_entities.Clear()
-		_deadEntities.Clear()
-		For Local rel:= EachIn _relationships.Values()
-			rel.Clear()
+			e.Kill()
 		Next
 	End
 	
