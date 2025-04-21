@@ -1,0 +1,255 @@
+Strict
+
+Import brl.vec2d
+Import mojo2
+
+
+Class SceneGraphNode
+
+	Enumerate TYPE_NONE, TYPE_IMAGE
+	
+	'Valid drawable classes: Image
+    Method New(drawable:Object=Null)
+		If drawable
+			Drawable = drawable
+		Else
+			_drawableType = TYPE_NONE
+		EndIf
+    End
+
+    Method X:Void(x#) Property
+        _transform.X = x
+        _InvalidateWorldTransform()
+    End
+
+    Method X#() Property
+        Return _transform.X
+    End
+
+    Method Y:Void(y#) Property
+        _transform.Y = y
+        _InvalidateWorldTransform()
+    End
+
+    Method Y#() Property
+        Return _transform.Y
+    End
+    
+    Method SetPosition:Void(x#, y#)
+    	_transform.Set(x, y)
+    	_InvalidateWorldTransform()
+    End
+
+    Method WorldX#() Property
+        If Not _isWorldTransformValid Then _CalculateWorldTransform()
+        Return _worldTransform.X
+    End
+
+    Method WorldY#() Property
+        If Not _isWorldTransformValid Then _CalculateWorldTransform()
+        Return _worldTransform.Y
+    End
+    
+    Method Width#() Property
+    	Return _w
+    End
+    
+    Method Width:Void(w#) Property
+    	If w < 0 Then Error("SceneGraphNode.Width: width must be >= 0")
+    	_w = w
+    End
+    
+    Method Width:Void(w#) Property
+    	If w < 0 Then Error("SceneGraphNode.Width: width must be >= 0")
+    	_w = w
+    End
+    
+    Method Height#() Property
+    	Return _h
+    End
+    
+    Method Height:Void(h#) Property
+    	If h < 0 Then Error("SceneGraphNode.Height: height must be >= 0")
+    	_h = h
+    End
+    
+    Method ScaleX#() Property
+    	Return _scaleX
+    End
+    
+    Method ScaleX:Void(scaleX#) Property
+    	If scaleX <= 0 Then Error("SceneGraphNode.ScaleX: scaleX must be > 0")
+    	_scaleX = scaleX
+    End
+    
+    Method ScaleY#() Property
+    	Return _scaleY
+    End
+    
+    Method ScaleY:Void(scaleY#) Property
+    	If scaleY <= 0 Then Error("SceneGraphNode.ScaleX: scaleY must be > 0")
+    	_scaleY = scaleY
+    End
+    
+    Method Rotation#() Property
+    	Return _rotation
+    End
+    
+    Method Rotation:Void(rotation#) Property
+    	_rotation = rotation
+    End
+    
+    Method Z%() Property
+    	Return _z
+    End
+    
+    Method Z:Void(z%) Property
+    	_z = z
+    	If _parent Then _parent._isChildrenZOrderValid = False
+    End
+    
+    Method DrawableType%() Property
+    	Return _drawableType
+    End
+    
+    Method Drawable:Object() Property
+    	Return _drawable
+    End
+    
+    'Valid drawable classes: Image
+    Method Drawable:Void(drawable:Object) Property
+    	Print("Setting drawable")
+    	If drawable = Null Then Error("SceneGraphNode.SetDrawable(): drawable is Null")
+		Local image:= Image(drawable)
+		If image
+			_drawableType = TYPE_IMAGE
+			_drawable = image
+			Return
+		EndIf
+		Error("SceneGraphNode.SetDrawable(): invalid drawable type")
+    End
+    
+    Method CreateChild:SceneGraphNode()
+    	Local node:SceneGraphNode
+		node = New SceneGraphNode()
+		node._drawableType = TYPE_NONE
+    	AddChild(node)
+    	Return node
+    End
+    
+    Method CreateChild:SceneGraphNode(image:Image)
+    	If image = Null Then Error("SceneGraphNode.CreateChild(): image is Null")
+    	Local node:= New SceneGraphNode()
+    	node._drawable = image
+    	node._drawableType = TYPE_IMAGE
+    	AddChild(node)
+    	Return node
+    End
+    
+    Method AddChild:Void(node:SceneGraphNode)
+    	If node = Null Then Error("SceneGraphNode.AddChild(): node is Null")
+    	If node._parent Then Error("SceneGraphNode.AddChild(): Cannot add child, node already has a parent")
+    	_children.AddLast(node)
+    	node._parent = Self
+    	_isChildrenZOrderValid = False
+    End
+    
+    'Remove a child from this node
+    Method Remove:Void(node:SceneGraphNode)
+    	If node = Null Then Error("SceneGraphNode.Remove(): node is NUll")
+    	_children.Remove(node)
+    	node._parent = Null
+    End
+    
+    'Remove this node from its parent
+    Method Remove:Void()
+    	_parent._children.Remove(Self)
+    	_parent = Null
+    End
+    
+    'Remove all child nodes
+    Method Clear:Void()
+    	For Local node:= EachIn _children
+    		node._parnt = Null
+    	Next
+    	_children.Clear()
+    End
+    
+    'Remove this node from its parent. Recursively remove all child nodes and drawables
+    Method Destroy:Void()
+    	_parent = Null
+    	_drawable = Null
+    	_drawableType = TYPE_NONE
+    	For Local node:= EachIn _children
+    		node.Destroy()
+    	Next
+    End
+    
+    Method Draw:Void(drawList:DrawList)
+		'Set up drawing matrix
+		drawList.PushMatrix()
+		drawList.TranslateRotateScale(_transform.X, _transform.Y, _rotation, _scaleX, _scaleY)
+	    'Draw the node
+	    Select _drawableType
+	    	Case SceneGraphNode.TYPE_IMAGE
+	    		drawList.DrawImage(Image(_drawable))
+	    	Case SceneGraphNode.TYPE_NONE
+	    		'nothing to see here
+	    End
+	    'Sort children by Z-order
+	    If Not _isChildrenZOrderValid
+	        _children.Sort()
+	        _isChildrenZOrderValid = True
+	    EndIf
+	    'Draw child nodes
+	    For Local child:= EachIn _children
+			child.Draw(drawList)
+		Next
+		'Clean up
+	    drawList.PopMatrix()
+	End
+
+	Private
+
+	Field _parent:SceneGraphNode
+    Field _children:= New SceneGraphNodeList()
+    Field _isChildrenZOrderValid? 'Are the nodes in _children sorted by their Z property?
+    Field _transform:= New Vec2D()
+    Field _worldTransform:= New Vec2D() 'Location on screen
+    Field _isWorldTransformValid?
+    Field _w#, _h#
+    Field _z%
+    Field _scaleX# = 1.0
+    Field _scaleY# = 1.0
+    Field _rotation#
+    Field _drawable:Object
+    Field _drawableType% = TYPE_NONE
+    
+	Method _InvalidateWorldTransform:Void()
+    	For Local child:= EachIn _children
+    		child._InvalidateWorldTransform()
+    	Next
+    	_isWorldTransformValid = False
+    End
+    
+    Method _CalculateWorldTransform:Void()
+        _worldTransform = New Vec2D()
+        If _parent
+        	_worldTransform.Set(_parent.WorldX, _parent.WorldY)
+        Else
+        	_worldTransform.Set(_transform.X, _transform.Y)
+        EndIf
+        _isWorldTransformValid = True
+    End
+
+End
+
+Private
+
+Class SceneGraphNodeList Extends List<SceneGraphNode>
+
+    Method Compare%(lhs:SceneGraphNode, rhs:SceneGraphNode)
+        Return lhs._z - rhs._z
+    End
+
+End

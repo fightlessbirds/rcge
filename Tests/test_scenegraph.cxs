@@ -1,0 +1,52 @@
+Strict
+
+Import rcge.game
+Import rcge.scenegraph
+
+
+Class TestScene Extends Scene
+
+	Field sceneRoot:SceneGraphNode
+	Field burger:SceneGraphNode
+	
+	Field burger1Image:Image
+	Field burger2Image:Image
+	Field burger3Image:Image
+
+	Method OnEnter:Void()
+		burger1Image = Image.Load("burger1.png", , , Image.Mipmap)
+		burger2Image = Image.Load("burger2.png", , , Image.Mipmap)
+		burger3Image = Image.Load("burger3.png", , , Image.Mipmap)
+		
+		sceneRoot = New SceneGraphNode()
+		
+		burger = sceneRoot.CreateChild(burger2Image)
+		burger.SetPosition(DeviceWidth() / 2, DeviceHeight() / 2)
+		burger.ScaleX = 4
+		burger.ScaleY = 8
+		
+		Local burgerL:= burger.CreateChild(burger1Image)
+		burgerL.X = -16
+		
+		Local burgerR:= burger.CreateChild(burger3Image)
+		burgerR.X = 16
+	End
+	
+	Method OnExit:Void()
+	End
+	
+	Method OnUpdate:Void(dt#)
+		burger.Rotation = Sin(Millisecs() * 0.05) * 360.0
+	End
+	
+	Method OnRender:Void(canvas:Canvas)
+		sceneRoot.Draw(canvas)
+	End
+
+End
+
+Function Main%()
+	New Game(New TestScene())
+	
+	Return 0
+End
