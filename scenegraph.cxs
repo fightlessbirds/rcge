@@ -50,29 +50,6 @@ Class SceneGraphNode
         Return _worldTransform.Y
     End
     
-    Method Width#() Property
-    	Return _w
-    End
-    
-    Method Width:Void(w#) Property
-    	If w < 0 Then Error("SceneGraphNode.Width: width must be >= 0")
-    	_w = w
-    End
-    
-    Method Width:Void(w#) Property
-    	If w < 0 Then Error("SceneGraphNode.Width: width must be >= 0")
-    	_w = w
-    End
-    
-    Method Height#() Property
-    	Return _h
-    End
-    
-    Method Height:Void(h#) Property
-    	If h < 0 Then Error("SceneGraphNode.Height: height must be >= 0")
-    	_h = h
-    End
-    
     Method ScaleX#() Property
     	Return _scaleX
     End
@@ -217,7 +194,6 @@ Class SceneGraphNode
     Field _transform:= New Vec2D()
     Field _worldTransform:= New Vec2D() 'Location on screen
     Field _isWorldTransformValid?
-    Field _w#, _h#
     Field _z%
     Field _scaleX# = 1.0
     Field _scaleY# = 1.0
